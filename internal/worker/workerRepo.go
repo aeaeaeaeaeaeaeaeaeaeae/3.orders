@@ -78,13 +78,13 @@ func (w *WorkerRepo) MarkPublished(ctx context.Context, id string) error {
 
 	return nil
 }
-func (w *WorkerRepo) MarkFailed(ctx context.Context, id, batchId string) error {
-	const query = `UPDATE outbox SET attempts = attempts + 1, locked_until = now() + (2 ^ LEAST(attempts, 6)) * interval '1 second', locked_by = NULL WHERE event_id = $1 AND locked_by = $2`
+func (w *WorkerRepo) MarkFailed(ctx context.Context, id, batchId, lastError string) error {
+	const query = `UPDATE outbox SET attempts = attempts + 1, last_error = $3, locked_until = now() + (2 ^ LEAST(attempts, 6)) * interval '1 second', locked_by = NULL WHERE event_id = $1 AND locked_by = $2`
 
 	ctx, cancel := context.WithTimeout(ctx, w.dbTimeout)
 	defer cancel()
 
-	_, err := w.db.ExecContext(ctx, query, id, batchId)
+	_, err := w.db.ExecContext(ctx, query, id, batchId, lastError)
 	if err != nil {
 		return err
 	}

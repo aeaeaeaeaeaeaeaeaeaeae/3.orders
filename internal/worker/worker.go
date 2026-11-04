@@ -10,7 +10,7 @@ import (
 type WorkerRepository interface {
 	GetBatch(ctx context.Context, attempts, limit int) ([]order.OutboxRecord, error, string)
 	MarkPublished(ctx context.Context, id string) error
-	MarkFailed(ctx context.Context, id, batchId string) error
+	MarkFailed(ctx context.Context, id, batchId, lastError string) error
 }
 
 type Publisher interface {
@@ -78,7 +78,7 @@ func (w *Worker) processBatch(ctx context.Context) error {
 		pubErr := w.pub.Publish(pubCtx, v.EventID, v.Payload)
 		cancel()
 		if pubErr != nil {
-			err = w.repo.MarkFailed(ctx, v.EventID, lockedBy)
+			err = w.repo.MarkFailed(ctx, v.EventID, lockedBy, pubErr.Error())
 		} else {
 			err = w.repo.MarkPublished(ctx, v.EventID)
 		}
